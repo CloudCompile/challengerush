@@ -157,7 +157,7 @@
         .ov-far {
             background:
                 linear-gradient(180deg, rgba(13, 60, 66, .72), rgba(7, 36, 42, .82)),
-                url("26100302/loading.png") center / cover no-repeat;
+                url("loading.png") center / cover no-repeat;
             filter: blur(3px);
         }
 
@@ -303,7 +303,7 @@
     <script>
         var buildUrl = "Build";
         var versionFolder = "26100302/";
-        buildUrl = versionFolder + buildUrl;
+        buildUrl = "https://play.challengerush.com/game/challenge-rush/"+versionFolder + buildUrl;
         var loaderUrl = buildUrl + "/challenge-rush-v26100302.loader.js";
         var config = {
             dataUrl: buildUrl + "/challenge-rush-v26100302.data.unityweb",
@@ -337,7 +337,9 @@
             return true;
         }
         if (isDiffHost()) {
+            if (!document.referrer) { config = {}; }
         } else if (!document.referrer) {
+            window.location.href = "https://1games.io/" + config.gameId;
         }
 
         window["GMSOFT_SDKTYPE"] = "gm";
@@ -567,15 +569,16 @@
             var ti = 0, buf = -1, bufTap = null;
 
             var take = function () {
-              if (buf >= 0 && t - buf <= 0.12) { var tap = bufTap; buf = -1; bufTap = null; return tap; }
+              if (buf >= 0 && t - buf <= 0.12) return bufTap;
               return null;
             };
+            var commit = function () { buf = -1; bufTap = null; };
 
             while (t < t1 - 1e-9) {
               var local = t - t0;
               while (ti < taps.length && taps[ti].b * BEAT <= local) { buf = t; bufTap = taps[ti]; ti++; }
 
-              step(st, A.mode, V, ceil, t, t0, take);
+              step(st, A.mode, V, ceil, t, t0, take, commit);
               tickAnim(st, A.mode, t);
 
               rec.y.push(st.y); rec.rot.push(st.rot); rec.mode.push(A.mode);
@@ -601,7 +604,7 @@
           st.fi = frameIndex(st.clipTime, CLIP_FPS[clip] || FPS_FALLBACK, frames.length, !CLIP_ONESHOT[clip]);
         }
 
-        function step(st, mode, V, ceil, t, t0, takeTap) {
+        function step(st, mode, V, ceil, t, t0, takeTap, commit) {
           var floorC = V.hb / 2;                           // resting centre on the ground
           var ceilC = ceil != null ? ceil - V.hb / 2 : null;
           var local = t - t0;
@@ -611,6 +614,7 @@
             if (tap && (st.onGround || (tap.orb && st.y < 1.6))) {
               if (tap.pad && st.onGround) pads.push({ t: t });        // drawn where it fired
               if (tap.orb && !st.onGround) orbs.push({ t: t, y: st.y });
+              commit();
               st.vy = V.v; st.onGround = false;
               events.push({ t: t, k: tap.orb ? 'orb' : 'jump', y: st.y });
             }
@@ -637,6 +641,7 @@
                 var from = st.y;
                 st.grav = -st.grav;
                 st.y = st.grav > 0 ? floorC : ceilC;
+                commit();
                 events.push({ t: t, k: 'tele', y: from, y2: st.y });
               }
               st.vy = 0;
