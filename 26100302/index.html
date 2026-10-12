@@ -307,8 +307,8 @@
 
     
     
-	<script src="https://gma.readyplayer1.xyz/sdk/v3/gm-sdk.js"></script>
-    <script src="https://gma.readyplayer1.xyz/sdk/v3/gm-iframe.js"></script>
+	<script defer src="https://gma.readyplayer1.xyz/sdk/v3/gm-sdk.js"></script>
+    <script defer src="https://gma.readyplayer1.xyz/sdk/v3/gm-iframe.js"></script>
     <script>
         var buildUrl = "Build";
         var versionFolder = "26100302/";
@@ -325,11 +325,16 @@
         };
         config.gameId = "challenge-rush";
 
-		if (window.GMGameSDK) {
-			window.GMGameSDK.init(`${config.gameId}-1games`,"https://gma.readyplayer1.xyz").setVersion(config.productVersion);
-		} else {
-			console.error("Can't init GMSDK");
+		function initGMSDK() {
+			if (window.GMGameSDK) {
+				window.GMGameSDK.init(`${config.gameId}-1games`,"https://gma.readyplayer1.xyz").setVersion(config.productVersion);
+			} else {
+				console.error("Can't init GMSDK");
+			}
 		}
+		// the SDK scripts are deferred, so the global only exists after they run
+		if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initGMSDK);
+		else initGMSDK();
 
         config.eventLog = false;
         var _prerollAdFinished = true;
@@ -355,7 +360,7 @@
         window["GMSOFT_SIGNED"] = "eyJzaWduZWQiOiJSdlJ3dENSNmNab09rZ0FLSnYxS2o4ZzVjOUFxRkU4RG1zM0dacHduXC8wRTV0bWJLS21WamhocWg5Q1crOWNGdTZ6ZUltXC9jZ3UyYnhBQXFibE9UMHBkQjcrQ0o4a0YwSTMzeUJ1WGVMbmF3M3ZnM2FjZkZESWF6MlhhUFZabFlCNlNkQVJBbWtaXC9hdFZPckNaTUNERk5lZEFMZ2F1ZTQyXC9ocFlKWEN3aVwvaFwvVTk0QWdoUmorZXMxcVA4Q1NuTk05MEFsV0xJRkZEc25JUjkwR2RDbmltQTRPN1JjcGNIVGhwM2k0d3p6MUoxd3IzcjV2VHQ2eTltSHpOcmRPYkdxSWJYdWZvTGxJQ2IwUU5mWTk2eExrcjJsTmY0K2xlK3hOSitKeE1MdDVCUnNjcng2V3M0WlRlZHcxWVhxWG9vQ3pKS0o3YjhoTmFodTZmWjI3SFVBdlE9PSIsImFwIjoieWVzIiwiaG4iOiJkYXNobWV0cnkuMWdhbWVzLmlvIiwiZG9tYWluIjoiMWdhbWVzLmlvIiwicyI6InllcyIsInN0eXBlIjoyfQ==";
     </script>
     
-    <script id="gmsoft-jssdk" src="https://games.1games.io/lib/1games/gmsdkv2.js"></script>
+    <script defer id="gmsoft-jssdk" src="https://games.1games.io/lib/1games/gmsdkv2.js"></script>
 </head>
 
 <body>
