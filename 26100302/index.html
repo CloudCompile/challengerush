@@ -92,6 +92,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://games.1games.io">
+    <link rel="preconnect" href="https://play.challengerush.com">
+    <link rel="preconnect" href="https://challengerush.com">
     <link href="https://fonts.googleapis.com/css2?family=Electrolize&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://games.1games.io/lib/1games/theme/challenge-rush/game.css">
     <meta name="robots" content="noindex, nofollow">
@@ -411,6 +413,10 @@
       'use strict';
 
       var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // set once the splash must never animate again: the game took over, or the boot failed
+      var revealStop = null;
+      window.__crStopSplash = function () { revealStop = true; };
 
       var IMG_FALLBACK = 'https://challengerush.com/template/challenge-rush/img/';
       var IMG = IMG_FALLBACK;   // games.1games.io 404s every sprite; do not pay a wasted first request
@@ -1204,8 +1210,8 @@
             var ph = tr % LOOP, ii = idx(ph), md = rec.mode[ii];
             var cols = r === 0 ? [P1, P2] : P.bots[r - 1];
 
-            if (md === 'wave') drawTrail(tr, 'wave', cols[0], 0.30, 0.55);
-            else if (md === 'ship' || md === 'ufo') drawTrail(tr, md, cols[0], 0.11, 0.28);
+            if (md === 'wave') drawTrail(ph, 'wave', cols[0], 0.30, 0.55);
+            else if (md === 'ship' || md === 'ufo') drawTrail(ph, md, cols[0], 0.11, 0.28);
 
             if (r === 0 && (md === 'cube' || md === 'ball')) {
               for (var g = 0; g < GHOSTS.length; g++) {
@@ -1229,10 +1235,18 @@
 
         var T0 = LOOP * 2;
 
-        if (reduce) { frame(T0 + BEAT * 3.4, 0); return; }   // one static, representative frame
+        if (reduce) {
+          try { document.documentElement.style.setProperty('--beat', (BEAT * 2).toFixed(3) + 's'); } catch (e) {}
+          var _staticFrame = function () { if (revealStop) return; resize(); frame(T0 + BEAT * 3.4, 0); };
+          _staticFrame();
+          // one frame lands before the sprites decode and falls back to flat blocks; redraw as art arrives
+          for (var _pi = 0; _pi < 40; _pi++) setTimeout(_staticFrame, 150 * _pi);
+          return;
+        }
 
         var raf = null, base = null, prev = 0;
         function loop(ts) {
+          if (revealStop) { raf = null; return; }         // failed, or the game took over
           if (base === null) { base = ts; prev = 0; }
           if (overlay && overlay.classList.contains('hidden')) { raf = null; return; }  // game took over
           var now = (ts - base) / 1000;
@@ -1275,6 +1289,7 @@
         overlay.addEventListener('pointerleave', function () { px = 0; py = 0; });
 
         function frame() {
+          if (revealStop) { raf = null; return; }         // failed, or the game took over
           if (overlay.classList.contains('hidden')) { raf = null; return; }  // game took over
           t += 0.0076;
           cx += (px - cx) * 0.06;
@@ -1291,7 +1306,7 @@
         document.addEventListener('visibilitychange', function () {
           if (document.hidden) {
             if (raf) { cancelAnimationFrame(raf); raf = null; }
-          } else if (!raf && !overlay.classList.contains('hidden')) {
+          } else if (!raf && !revealStop && !overlay.classList.contains('hidden')) {
             raf = requestAnimationFrame(frame);
           }
         });
@@ -1325,7 +1340,7 @@
             _pShown = Math.abs(d) > 0.2 ? _pShown + d * 0.16 : _pTarget;
             var shown = Math.round(_pShown);
             if (loadFill) loadFill.style.width = _pShown.toFixed(1) + "%";
-            if (loadPct) loadPct.innerText = shown + "%";
+            if (loadPct) loadPct.textContent = shown + "%";
             if (_pShown !== _pTarget && !loadingBar.classList.contains("hidden")) {
                 _pRaf = requestAnimationFrame(pumpProgress);
             }
@@ -1356,6 +1371,7 @@
         function bootFailed(reason, detail) {
             if (_stallTimer) { clearTimeout(_stallTimer); _stallTimer = null; }
             loadingBar.classList.add("failed");
+            try { if (window.__crStopSplash) window.__crStopSplash(); } catch (e) { }
             var msg = document.getElementById("loaderErrorMsg");
             if (msg && detail) msg.setAttribute("title", String(detail));
             console.error("[GMSOFT] boot failed:", reason, detail || "");
@@ -1370,6 +1386,7 @@
                 console.log("[GMSOFT] Both preroll ad finished and Unity ready. Entering game.");
                 loadingBar.classList.add("hidden");
                 loadingBar.style.display = "none";
+                try { if (window.__crStopSplash) window.__crStopSplash(); } catch (e) { }
                 container.style.display = "block";
                 window.focus();
                 try { CRPortal.ready(); } catch (e) { }
